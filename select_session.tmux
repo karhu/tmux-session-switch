@@ -8,6 +8,7 @@ default_preview='true'
 default_fzf_window_position='center,70%,80%'
 default_fzf_preview_position='right,,,nowrap'
 default_min_preview_lines='10'
+default_hide_current_session='true'
 
 # User overridable options
 tmux_bind_key="@fzf_session_switch_bind-key"
@@ -15,6 +16,7 @@ tmux_preview="@fzf_session_switch_preview"
 tmux_fzf_window_position="@fzf_session_switch_window-position"
 tmux_fzf_preview_position="@fzf_session_switch_preview-position"
 tmux_min_preview_lines="@fzf_session_switch_min-preview-lines"
+tmux_hide_current_session="@fzf_session_switch_hide-current-session"
 
 get_tmux_option() {
     local option="${1}"
@@ -29,15 +31,16 @@ get_tmux_option() {
 }
 
 set_switch_session_bindings() {
-    local bind_key preview fzf_window_position fzf_preview_position min_preview_lines
+    local bind_key preview fzf_window_position fzf_preview_position min_preview_lines hide_current_session
     bind_key="$(get_tmux_option "${tmux_bind_key}" "${default_bind_key}")"
     preview="$(get_tmux_option "${tmux_preview}" "${default_preview}")"
     fzf_window_position="$(get_tmux_option "${tmux_fzf_window_position}" "${default_fzf_window_position}")"
     fzf_preview_position="$(get_tmux_option "${tmux_fzf_preview_position}" "${default_fzf_preview_position}")"
     min_preview_lines="$(get_tmux_option "${tmux_min_preview_lines}" "${default_min_preview_lines}")"
+    hide_current_session="$(get_tmux_option "${tmux_hide_current_session}" "${default_hide_current_session}")"
 
     tmux bind-key "${bind_key}" run-shell \
-        "'${CURRENT_DIR}/select_session.sh' '${preview}' '${fzf_window_position}' '${fzf_preview_position}' '${min_preview_lines}'"
+        "'${CURRENT_DIR}/select_session.sh' '${preview}' '${fzf_window_position}' '${fzf_preview_position}' '${min_preview_lines}' '${hide_current_session}'"
 }
 
 set_switch_session_bindings

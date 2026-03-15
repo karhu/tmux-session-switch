@@ -5,7 +5,12 @@
 # If you press ENTER on an empty line, it creates a new session.
 
 function build_session_lines() {
+    local exclude_session="${1}"
     while IFS=$'\t' read -r session_name window_count; do
+        # Skip the current session if configured to hide it
+        if [[ -n "${exclude_session}" && "${session_name}" = "${exclude_session}" ]]; then
+            continue
+        fi
         local pane_count=0
         local metadata=""
 
@@ -60,32 +65,23 @@ function select_session() {
         border_styling="--preview-label='Preview'"
     fi
 
-    # Check if we're using the fzf preview pane
+    # Check if we're using the fzf preview
     if [[ "${1}" = 'true' ]]; then
-        local min_lines="${4}"
-        preview="--preview '"
-        preview+='session={1}; '
-        preview+='pane_ids=$(tmux list-panes -t "${session}" -F "#{pane_id}"); '
-        preview+='pane_count=$(echo "${pane_ids}" | wc -l | tr -d " "); '
-        preview+='lines_per_pane=$(( ${FZF_PREVIEW_LINES:-30} / pane_count )); '
-        preview+="[ \${lines_per_pane} -lt ${min_lines} ] && lines_per_pane=${min_lines}; "
-        preview+='first=1; '
-        preview+='for pid in ${pane_ids}; do '
-        preview+='  if [ ${first} -eq 0 ]; then '
-        preview+='    printf "%.0s─" $(seq 1 ${FZF_PREVIEW_COLUMNS:-80}); echo; '
-        preview+='  fi; '
-        preview+='  first=0; '
-        preview+='  tmux capture-pane -ep -S -${lines_per_pane} -t ${pid} | '
-        preview+="  awk \"{a[NR]=\\\$0} END{for(i=NR;i>0;i--) if(a[i]~/[^ \\t]/){for(j=1;j<=i;j++) print a[j]; exit}}\" | "
-        preview+='  tail -n ${lines_per_pane}; '
-        preview+='done'
-        preview+="' --preview-window=${3}"
+        local script_dir
+        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        preview="--preview '${script_dir}/preview_session.sh {1} ${4}' --preview-window=${3}"
+    fi
+
+    # Build session list, optionally excluding current session
+    local exclude=""
+    if [[ "${5}" = 'true' ]]; then
+        exclude="${current_session}"
     fi
 
     # Launch switcher
-    fzf_output=$(build_session_lines |
+    fzf_output=$(build_session_lines "${exclude}" |
         eval fzf --exit-0 --print-query --reverse --tmux "${2}" \
-          --delimiter='\t' --with-nth=2 "${border_styling}" "${preview}")
+          --delimiter='\\t' --with-nth=2 "${border_styling}" "${preview}")
 
     # --print-query makes fzf output: line 1 = query, line 2 = selected item
     query=$(echo "${fzf_output}" | head -1)
@@ -144,5 +140,7 @@ fzf_window_position="${2}"
 fzf_preview_position="${3}"
 # Minimum preview lines per pane
 min_preview_lines="${4}"
+# Hide current session from list
+hide_current_session="${5}"
 
-select_session "${preview}" "${fzf_window_position}" "${fzf_preview_position}" "${min_preview_lines}"
+select_session "${preview}" "${fzf_window_position}" "${fzf_preview_position}" "${min_preview_lines}" "${hide_current_session}"
