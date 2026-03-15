@@ -6,34 +6,51 @@
 
 function build_session_lines() {
     local exclude_session="${1}"
+    local -a names=() brackets=() metadata_list=()
+    local max_name_len=0
+
+    # First pass: collect session data
     while IFS=$'\t' read -r session_name window_count; do
-        # Skip the current session if configured to hide it
         if [[ -n "${exclude_session}" && "${session_name}" = "${exclude_session}" ]]; then
             continue
         fi
         local pane_count=0
         local metadata=""
 
-        # Gather pane metadata for this session
         while IFS= read -r pane_line; do
             pane_count=$((pane_count + 1))
             metadata+="${pane_line} "
         done < <(tmux list-panes -t "${session_name}" -s -F '#{window_name} #{pane_title} #{pane_current_command}')
 
-        # Build display string with conditional brackets
-        local display="${session_name}"
+        local bracket=""
         if [[ ${window_count} -eq 1 && ${pane_count} -gt 1 ]]; then
-            display+=" [${pane_count} panes]"
+            bracket="[${pane_count} panes]"
         elif [[ ${window_count} -gt 1 && ${pane_count} -le ${window_count} ]]; then
-            display+=" [${window_count} windows]"
+            bracket="[${window_count} windows]"
         elif [[ ${window_count} -gt 1 && ${pane_count} -gt ${window_count} ]]; then
-            display+=" [${window_count} windows, ${pane_count} panes]"
+            bracket="[${window_count} windows, ${pane_count} panes]"
         fi
-        # 1 window, 1 pane: no brackets (display stays as session_name)
 
-        # Output: session_name<TAB>display_string<TAB>metadata
-        printf '%s\t%s\t%s\n' "${session_name}" "${display}" "${metadata}"
+        names+=("${session_name}")
+        brackets+=("${bracket}")
+        metadata_list+=("${metadata}")
+
+        if [[ ${#session_name} -gt ${max_name_len} ]]; then
+            max_name_len=${#session_name}
+        fi
     done < <(tmux list-sessions -F '#{session_name}	#{session_windows}')
+
+    # Second pass: output with column-aligned brackets
+    for i in "${!names[@]}"; do
+        local display
+        if [[ -n "${brackets[$i]}" ]]; then
+            local padding=$(( max_name_len - ${#names[$i]} + 2 ))
+            display="${names[$i]}$(printf '%*s' "${padding}" '')${brackets[$i]}"
+        else
+            display="${names[$i]}"
+        fi
+        printf '%s\t%s\t%s\n' "${names[$i]}" "${display}" "${metadata_list[$i]}"
+    done
 }
 
 function select_session() {
