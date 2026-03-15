@@ -32,8 +32,8 @@ function build_session_lines() {
 }
 
 function select_session() {
-    local border_styling="" fzf_version_comparison
-    local current_session preview
+    local border_styling="" fzf_version fzf_version_comparison
+    local current_session fzf_output query selection session_id preview
 
     # Save the currently active session name
     current_session=$(tmux display-message -p '#{session_name}')
@@ -56,7 +56,7 @@ function select_session() {
         border_styling+=" --ghost 'type to search...'"
     fi
     # Fallback to old border styling used in tmux-fzf-pane-switch release v1.1.2 if $border_styling is not set
-    if [[ -z ${border_styling+x} ]]; then
+    if [[ -z "${border_styling}" ]]; then
         border_styling="--preview-label='Preview'"
     fi
 
@@ -93,9 +93,6 @@ function select_session() {
 
     # Set session_id to first tab-delimited field of fzf output
     session_id=$(echo "${selection}" | awk -F'\t' '{print $1}')
-
-    # session_id was extracted from `selection` in the earlier step
-    # query was extracted from fzf output line 1
 
     if [[ -n "${session_id}" ]]; then
         # User selected a session — switch to it
