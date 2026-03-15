@@ -57,7 +57,7 @@ function select_session() {
     fi
     # Fallback to old border styling used in tmux-fzf-pane-switch release v1.1.2 if $border_styling is not set
     if [[ -z ${border_styling+x} ]]; then
-        border_styling="--preview-label='pane preview'"
+        border_styling="--preview-label='Preview'"
     fi
 
     # Check if we're using the fzf preview pane
@@ -139,7 +139,7 @@ function vercomp() {
 command -v tmux >/dev/null 2>&1 || { echo "tmux not found"; exit 1; }
 command -v fzf >/dev/null 2>&1 || { echo "fzf not found"; exit 1; }
 
-# Pane preview
+# Preview
 preview="${1}"
 # FZF window position
 fzf_window_position="${2}"
