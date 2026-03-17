@@ -112,8 +112,8 @@ function select_session() {
         tmux switch-client -t "${session_id}"
     elif [[ -n "${query}" ]]; then
         # No selection but user typed a query — offer to create new session
-        tmux command-prompt -b -I "${query}" -p "Create new session:" \
-            "new-session -d -s '%1' && switch-client -t '%1'"
+        tmux new-session -d -s "${query}" 2>/dev/null && \
+            tmux switch-client -t "${query}"
     else
         # User pressed escape with no query — stay on current session
         tmux switch-client -t "${current_session}"
