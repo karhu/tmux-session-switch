@@ -6,11 +6,27 @@
 
 function build_session_lines() {
     local exclude_session="${1}"
+    local sort_order="${2:-created}"
     local -a names=() brackets=() metadata_list=()
     local max_name_len=0
 
+    # Get session list with last-attached timestamp for sorting
+    local session_list
+    session_list=$(tmux list-sessions -F '#{session_name}	#{session_windows}	#{session_last_attached}')
+
+    # Sort based on configured order
+    case "${sort_order}" in
+        mru)
+            session_list=$(echo "${session_list}" | sort -t$'\t' -k3 -nr)
+            ;;
+        alphabetical)
+            session_list=$(echo "${session_list}" | sort -t$'\t' -k1,1)
+            ;;
+        # 'created' — use tmux's default order
+    esac
+
     # First pass: collect session data
-    while IFS=$'\t' read -r session_name window_count; do
+    while IFS=$'\t' read -r session_name window_count _; do
         if [[ -n "${exclude_session}" && "${session_name}" = "${exclude_session}" ]]; then
             continue
         fi
@@ -38,7 +54,7 @@ function build_session_lines() {
         if [[ ${#session_name} -gt ${max_name_len} ]]; then
             max_name_len=${#session_name}
         fi
-    done < <(tmux list-sessions -F '#{session_name}	#{session_windows}')
+    done <<< "${session_list}"
 
     # Second pass: output with column-aligned brackets
     for i in "${!names[@]}"; do
@@ -96,7 +112,7 @@ function select_session() {
     fi
 
     # Launch switcher
-    fzf_output=$(build_session_lines "${exclude}" |
+    fzf_output=$(build_session_lines "${exclude}" "${6}" |
         eval fzf --exit-0 --print-query --reverse --tmux "${2}" \
           --delimiter='\\t' --with-nth=2 "${border_styling}" "${preview}")
 
@@ -159,5 +175,7 @@ fzf_preview_position="${3}"
 min_preview_lines="${4}"
 # Hide current session from list
 hide_current_session="${5}"
+# Sort order: created, mru, alphabetical
+sort_order="${6}"
 
-select_session "${preview}" "${fzf_window_position}" "${fzf_preview_position}" "${min_preview_lines}" "${hide_current_session}"
+select_session "${preview}" "${fzf_window_position}" "${fzf_preview_position}" "${min_preview_lines}" "${hide_current_session}" "${sort_order}"
