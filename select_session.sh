@@ -105,10 +105,14 @@ function select_session() {
         preview="--preview '${script_dir}/preview_session.sh {1} ${4}' --preview-window=${3}"
     fi
 
-    # Build session list, optionally excluding current session
+    # Build session list, optionally excluding current session (but not if it's the only one)
     local exclude=""
     if [[ "${5}" = 'true' ]]; then
-        exclude="${current_session}"
+        local session_count
+        session_count=$(tmux list-sessions -F '#{session_name}' | wc -l | tr -d ' ')
+        if [[ ${session_count} -gt 1 ]]; then
+            exclude="${current_session}"
+        fi
     fi
 
     # Launch switcher
